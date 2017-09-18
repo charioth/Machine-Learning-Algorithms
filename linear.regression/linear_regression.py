@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import decimal as dc
 
 
 def mean(data):
@@ -9,6 +8,7 @@ def mean(data):
 
 
 def calculate_cost(errors):
+    """Receives a list of errors and return the sum of squares of each element divided by the lenght"""
     return sum(error * error for error in errors) / len(errors)
 
 
@@ -34,10 +34,13 @@ def load_data(file_name):
 
 
 def linear_estimation(intersection, slopes, variables_input):
+    """ Receive the intersection, slopes and the input list and
+    return the estimate value of the linear equation"""
     return (intersection + sum(b * x for b, x in zip(slopes, variables_input)))
 
 
 def print_linear_equation(intersection, slopes):
+    """Receive the intersection and a slope list to show the linear equation"""
     index = 0
     print("Y = " + str(intersection) + "*A" + str(index), end='')
     for slope in slopes:
@@ -79,23 +82,13 @@ def calculate_regression_line(x, y, variables_number):
 
 
 def estocastic_gradient(x, y, variables_number, sample_number, intersection, slopes, learning_rate):
-    repeat = 1
-    delta = 1
-    while((repeat != 0) and (float(abs(delta)) > 0.00001)):
-        for row, output in zip(x.iterrows(), y):
-            repeat = int(input("(0) Stope Machine (Others Numbers) Machine Interation: "))
-            delta = dc.Decimal(learning_rate * (linear_estimation(intersection, slopes, row[1]) - output)) / sample_number
-            if float(abs(delta)) < 0.00001:
-                break
-            for index, a in zip(range(0, variables_number), row[1]):
-                slopes[index] -= float(delta) * a
-            intersection -= float(delta)
-            cost = (sum(error * error for error in calculate_errors(intersection, slopes, x, y))) / (2 * sample_number)
-            print("Gradient: ", delta)
-            print("Cost: ", cost)
-    print("Gradient: ", delta)
-    cost = (sum(error * error for error in calculate_errors(intersection, slopes, x, y))) / (2 * sample_number)
-    print("Cost: ", cost)
+    dealta = 1
+    for row, output in zip(x.iterrows(), y):
+        delta = learning_rate * (linear_estimation(intersection, slopes, row[1]) - output) / (10 * sample_number)
+        print("Gradient: ", delta)
+        for index, a in zip(range(0, variables_number), row[1]):
+            slopes[index] -= (delta * a)
+        intersection -= delta
 
 
 def gradient_descend(x, y, variables_number, sample_number, intersection, slopes, learning_rate):
@@ -119,22 +112,83 @@ def gradient_descend(x, y, variables_number, sample_number, intersection, slopes
         for index, a in zip(range(0, variables_number), x_row[1]):
             gradient[index] += error * a
 
+        inter_gradient -= (learning_rate * inter_gradient) / (10 * sample_number)
+
+        # Actulize every slope
     for index in range(0, variables_number):
         slopes[index] = slopes[index] - ((learning_rate * gradient[index]) / (10 * sample_number))
 
     for g in gradient:
         print("Gradient: ", g)
+        return (inter_gradient, slopes)
+
+
+def gradient_descend_normalized(x, y, variables_number, sample_number, intersection, slopes, learning_rate):
+
+    # Keep the gradient calculated in each slope
+    gradient = [0] * variables_number
+
+    # Gradient of intersection (b0)
+    inter_gradient = 0
+
+    # For every input line
+    for x_row, output in zip(x.iterrows(), y):
+        # Calculate the error (Estimation of Y - Y)
+        estimate = intersection + sum(b * elem for b, elem in zip(slopes, x_row[1]))
+        error = linear_estimation(intersection, slopes, x_row[1]) - output
+
+        # b0 = sum(error of each column)
+        inter_gradient += error
+
+        # Gradient (step) is equal to the sum of error(i) * Xij
+        for index, a in zip(range(0, variables_number), x_row[1]):
+            gradient[index] += error * a
+
+        inter_gradient -= (learning_rate * inter_gradient) / sample_number
+
+        # Actulize every slope
+    for index in range(0, variables_number):
+        slopes[index] = slopes[index] - (learning_rate * gradient[index]) / sample_number
+
+    for g in gradient:
+        print("Gradient: ", g)
+        return (inter_gradient, slopes)
+
+
+def range_in_vector(vector):
+    """ Return the difference of the max value and min value of the vector (max - min)"""
+    max_value = 0
+    min_value = float('inf')
+    for value in vector:
+        if value > max_value:
+            max_value = value
+        elif value < min_value:
+            min_value = value
+    return max_value - min_value
+
+
+def mean_normalization(table):
+    # Mr stores the mean and range values of each column in table
+    mr = [(mean(table[index]), range_in_vector(table[index])) for index in table]
+    print(mr)
+    index = 1
+    new_table = []
+    for means, ranges in mr:
+        vector = table[index]
+        line = [((value - means) / ranges) for value in vector]
+        new_table.append(tuple(line))
+    labels = {index + 1: vector for index, vector in enumerate(new_table)}
+    return pd.DataFrame.from_records(labels)
 
 
 def linear_regression(dataset_file):
     # Load Dataset
     x, y, variables_number, sample_number = load_data(dataset_file)
-
     learning_rate = 0.000001
+
     # Keep approximating
     intersection = 0
     slopes = [0] * variables_number
-
     repeat = 1
     while repeat != 0:
         repeat = int(input("(0) Stope Machine (Others Numbers) Machine Interation: "))
