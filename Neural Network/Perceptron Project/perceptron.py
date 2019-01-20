@@ -127,4 +127,5 @@ if __name__ == "__main__":
         plt.legend(loc="right", bbox_to_anchor=(1, -0.1))
         plt.show()
 
+if __name__ == "__main__":
     main()
